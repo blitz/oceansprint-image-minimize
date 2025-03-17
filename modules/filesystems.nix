@@ -1,4 +1,4 @@
-{ config, ... }: {
+{ config, pkgs, ... }: {
 
   zramSwap = {
     # TODO zram-generator fails to compile for ARM.
@@ -6,6 +6,29 @@
 
     algorithm = "zstd";
     memoryPercent = 20;
+  };
+
+  boot.initrd = {
+    systemd.services.populate-init-nix-store = {
+      description = "Preserve the /nix/store from the initramfs";
+      wantedBy = [ "initrd.target" ];
+      before = [ "initrd.target" ];
+      unitConfig = {
+        DefaultDependencies = false;
+        RequiresMountsFor = "/run/initrd-nix-store";
+      };
+
+      serviceConfig.Type = "oneshot";
+
+      script = ''
+        cp -a /nix/store /run/initrd-nix-store
+
+        # Make everything read-only.
+        # TODO: This could be nicer if it's a different tmpfs that we can remount read-only.
+        chmod -R a-w /run/initrd-nix-store
+      '';
+    };
+
   };
 
   fileSystems = {
@@ -34,13 +57,23 @@
         fsType = partConf.Format;
       };
 
-    "/nix/store" =
+    "/nix/store-base" =
       let
         partConf = config.image.repart.partitions."store".repartConfig;
       in
       {
         device = "/dev/disk/by-partlabel/${partConf.Label}";
         fsType = partConf.Format;
+
+        # Otherwise mounting /nix/store fails below.
+        neededForBoot = true;
       };
+
+    "/nix/store".overlay = {
+      lowerdir = [
+        "/run/initrd-nix-store"
+        "/nix/store-base"
+      ];
+    };
   };
 }

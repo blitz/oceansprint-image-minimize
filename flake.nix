@@ -52,6 +52,10 @@
               imports = [
                 ./base.nix
                 ./version-18.nix
+
+                {
+                  boot.kernel.externalBootloader = true;
+                }
               ];
 
               system.image.version = "18";
@@ -60,6 +64,7 @@
           {
             default = self.packages."${system}".appliance_18_image;
 
+            config = appliance_18.config;
             kernel = appliance_18.config.boot.kernelPackages.kernel;
             uki = appliance_18.config.system.build.uki;
             initrd = appliance_18.config.system.build.initialRamdisk;
