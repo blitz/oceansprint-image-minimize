@@ -60,7 +60,11 @@
           {
             default = self.packages."${system}".appliance_18_image;
 
-            appliance_18_image = self.lib.mkInstallImage appliance_18;
+            kernel = appliance_18.config.boot.kernelPackages.kernel;
+            uki = appliance_18.config.system.build.uki;
+            initrd = appliance_18.config.system.build.initialRamdisk;
+            toplevel = appliance_18.config.system.build.toplevel;
+            image = self.lib.mkInstallImage appliance_18;
           };
       })) // {
       lib = {
