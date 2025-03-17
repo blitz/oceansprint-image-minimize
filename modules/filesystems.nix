@@ -2,7 +2,7 @@
 
   zramSwap = {
     # TODO zram-generator fails to compile for ARM.
-    enable = false;
+    enable = true;
 
     algorithm = "zstd";
     memoryPercent = 20;

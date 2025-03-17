@@ -16,7 +16,7 @@
       # We use this to build derivations for the build platform.
       buildPkgs = nixpkgs.legacyPackages."${buildPlatform}";
     in
-    (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "riscv64-linux" ] (system:
+    (flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         # We use this later to add some extra outputs for the build system.
         isBuildPlatform = system == buildPlatform;
@@ -48,36 +48,6 @@
       {
         packages =
           let
-            appliance_17 = crossNixos {
-              imports = [
-                ./base.nix
-                ./version-17.nix
-              ];
-
-              # To avoid having to prepare an update server, we just drop
-              # an update into the filesystem.
-              systemd.services.update-prepare-debug = {
-                description = "Prepare a fake update";
-                wantedBy = [ "multi-user.target" ];
-                after = [ "local-fs.target" ]; # Ensures the script runs after file systems are mounted.
-                requires = [ "local-fs.target" ]; # Ensure file systems are mounted.
-
-                script = ''
-                  # We configured systemd-sysupdate to look for updates here.
-                  mkdir /var/updates
-
-                  # We can't symlink the update package. systemd-sysupdate doesn't like that.
-                  cp ${self.packages."${system}".appliance_18_update}/* /var/updates
-                '';
-
-                serviceConfig = {
-                  Type = "oneshot"; # Ensures the service runs once and then exits.
-                };
-              };
-
-              system.image.version = "17";
-            };
-
             appliance_18 = crossNixos {
               imports = [
                 ./base.nix
@@ -88,32 +58,12 @@
             };
           in
           {
-            default = self.packages."${system}".appliance_17_image;
-
-            appliance_17_image = self.lib.mkInstallImage appliance_17;
-            appliance_17_update = self.lib.mkUpdate appliance_17;
+            default = self.packages."${system}".appliance_18_image;
 
             appliance_18_image = self.lib.mkInstallImage appliance_18;
-            appliance_18_update = self.lib.mkUpdate appliance_18;
           };
       })) // {
       lib = {
-        # Prepare an update package for the system.
-        mkUpdate = nixos:
-          let
-            config = nixos.config;
-          in
-          buildPkgs.runCommand "update-${config.system.image.version}"
-            {
-              nativeBuildInputs = with buildPkgs; [ xz ];
-            } ''
-            mkdir -p $out
-            xz -1 -cz ${config.system.build.uki}/${config.system.boot.loader.ukiFile} \
-              > $out/${config.system.boot.loader.ukiFile}.xz
-            xz -1 -cz ${config.system.build.image}/${config.boot.uki.name}_${config.system.image.version}.store.raw \
-              > $out/store_${config.system.image.version}.img.xz
-          '';
-
         # Prepare a ready-to-boot disk image.
         mkInstallImage = nixos:
           let
