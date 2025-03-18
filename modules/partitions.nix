@@ -34,6 +34,16 @@
             SplitName = "-";
           };
         };
+
+        # TODO: We should create this at boot time and not bake it into the image.
+        "swap" = {
+          repartConfig = {
+            Type = "swap";
+            SizeMinBytes = "512M";
+            SizeMaxBytes = "512M";
+          };
+        };
+
         "store" = {
           storePaths = [ config.system.build.toplevel ];
           stripNixStorePrefix = true;
@@ -51,6 +61,7 @@
         };
 
         # Placeholder for the second installed Nix store.
+        # TODO: We should create this at boot time and not bake it into the image.
         "store-empty" = {
           repartConfig = {
             Type = "linux-generic";
