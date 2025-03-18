@@ -78,7 +78,7 @@
           repartConfig = {
             Type = "var";
             UUID = "4d21b016-b534-45c2-a9fb-5c16e091fd2d"; # Well known
-            Format = "xfs";
+            Format = "ext4";
             Label = "nixos-persistent";
             Minimize = "off";
 
