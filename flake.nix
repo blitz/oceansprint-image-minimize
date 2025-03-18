@@ -2,7 +2,7 @@
   description = "systemd-sysupdate / systemd-repart Example";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:blitz/nixpkgs?ref=oceansprint-evil-toplevel";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
