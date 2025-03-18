@@ -7,6 +7,46 @@
   image.repart =
     let
       efiArch = pkgs.stdenv.hostPlatform.efiArch;
+
+      makeClosure = paths: pkgs.closureInfo { rootPaths = paths; };
+
+      storePaths = toplevel: "${pkgs.closureInfo { rootPaths = [ toplevel ]; }}/store-paths";
+
+      initrdStoreFiles = initrd: pkgs.runCommand "initrd-paths" {
+        nativeBuildInputs = [ pkgs.libarchive ];
+      } ''
+        bsdtar tf "${initrd}/initrd" | grep '^nix/store/' | sed s,^nix/store/,, > $out
+      '';
+
+      storeContent = { toplevel, initrd }: pkgs.runCommand "store-content" {
+        # The store image is self-contained.
+        __structuredAttrs = true;
+        unsafeDiscardReferences.out = true;
+      } ''
+        mkdir -p $out
+        for p in $(cat ${storePaths toplevel}); do
+          cp -va "$p" $out
+        done
+
+        # OTherwise, we can't delete files below.
+        chmod -R u+w $out/
+
+        directories=()
+        for p in $(cat ${initrdStoreFiles initrd}); do
+          if [ -f "$out/$p" ]; then
+            rm -v "$out/$p"
+          else
+            directories+=("$out/$p")
+          fi
+        done
+
+        for d in "''${directories[@]}"; do
+          # Directories may not be empty.
+          rmdir -v "$d" || true
+        done
+
+        chmod -R u-w $out/
+      '';
     in
     {
       name = config.boot.uki.name;
@@ -45,8 +85,11 @@
         };
 
         "store" = {
-          storePaths = [ config.system.build.toplevel ];
-          stripNixStorePrefix = true;
+          contents."/".source = "${storeContent {
+            toplevel = config.system.build.toplevel;
+            initrd = config.system.build.initialRamdisk;
+          }}";
+
           repartConfig = {
             Type = "linux-generic";
             Label = "store_${config.system.image.version}";
